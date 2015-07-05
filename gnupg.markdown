@@ -9,6 +9,54 @@ command and using the defaults should do.
 
 	$ gpg2 --gen-key
 
+## Backing up your key pair
+
+First, export your public key. You can share this publicly (hence the name).
+If you have a dotfiles  repository on [Github](https://github.com, I suggest
+it in there.
+
+	$ gpg2 --export --armor > your@email-public.asc
+
+Next, export your secret key. Be careful not transfer this over an insecure
+channel. I suggest putting it on a pen drive and storing it in a secure
+location. Note, if your key is protected by a passphrase (as it should be!),
+the exported file will also be.
+
+	$ gpg2 --export-secret-keys --armor > your@email-secret.asc
+
+As an additional precaution and to avoid bit rot, you should also print your
+key to paper. I suggest storing it as a QR code. Fortunately, this is easy to
+do using `paperkey` (for compression) and `qrencode` (to generate the QR code).
+
+	$ gpg2 --export-secret-keys | paperkey --output-type raw \
+	| base64 | qrencode -o secret.png
+
+We use `base64` since some QR code encoders and decoders have trouble with
+binary data. You can use [ZBar](http://zbar.sourceforge.net/) to read the QR code.
+
+	$ zbarimg --raw secret.png | base64 -d | paperkey --pubring \
+	your@email-public.asc --input-type=raw > your@email-secret.gpg
+
+At this point, you should print the QR code of your secret key onto paper.
+Verify that you are able to reconstruct your private key by either
+photographing or scanning the QR code and using ZBar as above. In my
+experience, ZBar has trouble with excessively large resolutions (such as you
+would get from modern high resolution cameras or scanners), so you may have to
+resize the resulting image down to a more reasonable size (say, 800x800).
+Remember to crop the image before resizing. Finally, I noticed that it can
+sometimes help to rotate the image if ZBar still refuses to recognize the QR
+code.
+
+	$ convert -rotate 90 secret.png secret.png
+
+Before you start using GnuPG, you should verify that everything went smoothing
+by deleting your key pair and importing it again. The secret key contains a
+copy of your public key, so it's only necessary to import that.
+
+	$ gpg2 --delete-secret-key KEYID
+	$ gpg2 --delete-key KEYID
+	$ gpg2 --import your@email-secret.gpg
+
 ## Replacing ssh-agent with gpg-agent
 
 It can be a little annoying having to maintain keys and remember passphrases
