@@ -1,13 +1,45 @@
 # GnuPG
 
-Last modified: 13-06-2015
+Last modified: 2016-12-30
 
 ## Generating a key pair
 
 First, you must generate a (public-private) key pair. Running the following
 command and using the defaults should do.
 
-	$ gpg2 --gen-key
+	$ gpg --gen-key
+
+Even better, we can improve the key stretching with better algorithms and more
+rounds by using the [following command](http://nullprogram.com/blog/2012/06/24/) instead.
+
+	$ gpg --gen-key \
+	$ --s2k-cipher-algo AES256 \
+	$ --s2k-digest-algo SHA512 \
+	$ --s2k-mode 3 \
+	$ --s2k-count 65000000
+
+You can verify that the private key was indeed generated with the chosen
+algorithms by running
+
+	$ gpg --delete-secret-key morten@alas.dk
+
+and checking for the lines containing
+
+	iter+salt S2K, algo: 9, SHA1 protection, hash: 10
+
+In this context, `algo: 9` refers to
+[AES-256](https://tools.ietf.org/html/rfc4880#section-9.2) and `hash: 10` is
+[SHA-512](https://tools.ietf.org/html/rfc4880#section-9.4).
+
+## Changing your passphrase
+
+It may occasionally be useful to change your passphrase. This is accomplished
+by the commands below. Notice that this changes your private key, so you will
+need to export it again.
+
+	$ gpg --edit-key Your-Key-ID-Here
+	gpg> passwd
+	gpg> save
 
 ## Backing up your key pair
 
@@ -15,20 +47,20 @@ First, export your public key. You can share this publicly (hence the name).
 If you have a dotfiles  repository on [Github](https://github.com, I suggest
 it in there.
 
-	$ gpg2 --export --armor > your@email-public.asc
+	$ gpg --export --armor > your@email-public.asc
 
 Next, export your secret key. Be careful not transfer this over an insecure
 channel. I suggest putting it on a pen drive and storing it in a secure
 location. Note, if your key is protected by a passphrase (as it should be!),
 the exported file will also be.
 
-	$ gpg2 --export-secret-keys --armor > your@email-secret.asc
+	$ gpg --export-secret-keys --armor > your@email-secret.asc
 
 As an additional precaution and to avoid bit rot, you should also print your
 key to paper. I suggest storing it as a QR code. Fortunately, this is easy to
 do using `paperkey` (for compression) and `qrencode` (to generate the QR code).
 
-	$ gpg2 --export-secret-keys | paperkey --output-type raw \
+	$ gpg --export-secret-keys | paperkey --output-type raw \
 	| base64 | qrencode -o secret.png
 
 We use `base64` since some QR code encoders and decoders have trouble with
@@ -53,9 +85,13 @@ Before you start using GnuPG, you should verify that everything went smoothing
 by deleting your key pair and importing it again. The secret key contains a
 copy of your public key, so it's only necessary to import that.
 
-	$ gpg2 --delete-secret-key KEYID
-	$ gpg2 --delete-key KEYID
-	$ gpg2 --import your@email-secret.gpg
+	$ gpg --delete-secret-key KEYID
+	$ gpg --delete-key KEYID
+	$ gpg --import your@email-secret.gpg
+
+Also notice that applications like `KWalletManager` probably will not accept
+your key before you trust it. You can fix this on the command-line or, more
+easily, using `KGpg`.
 
 ## Replacing ssh-agent with gpg-agent
 
